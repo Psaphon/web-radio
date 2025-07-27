@@ -220,7 +220,7 @@
             const [loading, setLoading] = useState(false);
             const audioRef = useRef(null);
 
-            // Real streaming tracks - using free music sources
+            // Working audio tracks - using CORS-friendly sources
             const tracks = [
                 {
                     title: "Underwater Dreams",
@@ -228,7 +228,7 @@
                     nftAddress: "0x1234...5678",
                     platform: "Sound.xyz",
                     artwork: "🌊",
-                    audioUrl: "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav"
+                    audioUrl: "https://commondatastorage.googleapis.com/codeskulptor-demos/DDR_assets/Kangaroo_MusiQue_-_The_Neverwritten_Role_Playing_Game.mp3"
                 },
                 {
                     title: "Deep Sea Melody",
@@ -236,7 +236,7 @@
                     nftAddress: "0x9876...5432", 
                     platform: "Catalog",
                     artwork: "🐠",
-                    audioUrl: "https://www.soundjay.com/misc/sounds/fail-buzzer-02.wav"
+                    audioUrl: "https://commondatastorage.googleapis.com/codeskulptor-assets/Epoq-Lepidoptera.ogg"
                 },
                 {
                     title: "Whale Song Symphony", 
@@ -244,7 +244,7 @@
                     nftAddress: "0xABCD...EFGH",
                     platform: "Zora", 
                     artwork: "🐋",
-                    audioUrl: "https://www.soundjay.com/misc/sounds/magic-chime-02.wav"
+                    audioUrl: "https://commondatastorage.googleapis.com/codeskulptor-demos/DDR_assets/Sevish_-__nbsp__Data_Goddess.mp3"
                 }
             ];
 
@@ -257,8 +257,19 @@
 
                 const updateTime = () => setCurrentTime(audio.currentTime);
                 const updateDuration = () => setDuration(audio.duration);
-                const handleLoadStart = () => setLoading(true);
-                const handleCanPlay = () => setLoading(false);
+                const handleLoadStart = () => {
+                    console.log('Loading audio:', currentTrackData.title);
+                    setLoading(true);
+                };
+                const handleCanPlay = () => {
+                    console.log('Audio ready:', currentTrackData.title);
+                    setLoading(false);
+                };
+                const handleError = (e) => {
+                    console.error('Audio error:', e.target.error);
+                    setLoading(false);
+                    setIsPlaying(false);
+                };
                 
                 const handleEnded = () => {
                     setIsPlaying(false);
@@ -269,6 +280,7 @@
                 audio.addEventListener('loadedmetadata', updateDuration);
                 audio.addEventListener('loadstart', handleLoadStart);
                 audio.addEventListener('canplay', handleCanPlay);
+                audio.addEventListener('error', handleError);
                 audio.addEventListener('ended', handleEnded);
 
                 return () => {
@@ -276,6 +288,7 @@
                     audio.removeEventListener('loadedmetadata', updateDuration);
                     audio.removeEventListener('loadstart', handleLoadStart);
                     audio.removeEventListener('canplay', handleCanPlay);
+                    audio.removeEventListener('error', handleError);
                     audio.removeEventListener('ended', handleEnded);
                 };
             }, [currentTrack]);
