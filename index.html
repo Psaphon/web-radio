@@ -220,15 +220,15 @@
             const [loading, setLoading] = useState(false);
             const audioRef = useRef(null);
 
-            // Working audio tracks - using CORS-friendly sources
+            // Working audio tracks - using CORS proxy for reliable playback
             const tracks = [
                 {
                     title: "Underwater Dreams",
-                    artist: "OceanicBeats",
+                    artist: "OceanicBeats", 
                     nftAddress: "0x1234...5678",
                     platform: "Sound.xyz",
                     artwork: "🌊",
-                    audioUrl: "https://commondatastorage.googleapis.com/codeskulptor-demos/DDR_assets/Kangaroo_MusiQue_-_The_Neverwritten_Role_Playing_Game.mp3"
+                    audioUrl: "https://corsproxy.io/?https://freesound.org/data/previews/316/316847_4939433-hq.mp3"
                 },
                 {
                     title: "Deep Sea Melody",
@@ -236,7 +236,7 @@
                     nftAddress: "0x9876...5432", 
                     platform: "Catalog",
                     artwork: "🐠",
-                    audioUrl: "https://commondatastorage.googleapis.com/codeskulptor-assets/Epoq-Lepidoptera.ogg"
+                    audioUrl: "https://corsproxy.io/?https://freesound.org/data/previews/392/392617_7383104-hq.mp3"
                 },
                 {
                     title: "Whale Song Symphony", 
@@ -244,7 +244,7 @@
                     nftAddress: "0xABCD...EFGH",
                     platform: "Zora", 
                     artwork: "🐋",
-                    audioUrl: "https://commondatastorage.googleapis.com/codeskulptor-demos/DDR_assets/Sevish_-__nbsp__Data_Goddess.mp3"
+                    audioUrl: "https://corsproxy.io/?https://freesound.org/data/previews/348/348565_6113829-hq.mp3"
                 }
             ];
 
@@ -309,19 +309,42 @@
 
             const togglePlay = async () => {
                 const audio = audioRef.current;
-                if (!audio) return;
+                if (!audio) {
+                    console.error('Audio element not found');
+                    return;
+                }
 
                 try {
                     if (isPlaying) {
+                        console.log('Pausing audio');
                         await audio.pause();
                         setIsPlaying(false);
                     } else {
-                        await audio.play();
-                        setIsPlaying(true);
+                        console.log('Attempting to play:', currentTrackData.title);
+                        console.log('Audio URL:', currentTrackData.audioUrl);
+                        
+                        // Reset audio to beginning if ended
+                        if (audio.ended) {
+                            audio.currentTime = 0;
+                        }
+                        
+                        const playPromise = audio.play();
+                        if (playPromise !== undefined) {
+                            await playPromise;
+                            setIsPlaying(true);
+                            console.log('Audio playing successfully');
+                        }
                     }
                 } catch (error) {
                     console.error('Playback error:', error);
+                    console.error('Error name:', error.name);
+                    console.error('Error message:', error.message);
                     setIsPlaying(false);
+                    
+                    // If autoplay was blocked, show user message
+                    if (error.name === 'NotAllowedError') {
+                        alert('Click the play button to start audio (browser autoplay policy)');
+                    }
                 }
             };
 
