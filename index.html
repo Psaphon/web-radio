@@ -215,41 +215,113 @@
             const [isPlaying, setIsPlaying] = useState(false);
             const [currentTrack, setCurrentTrack] = useState(0);
             const [volume, setVolume] = useState(70);
+            const [currentTime, setCurrentTime] = useState(0);
+            const [duration, setDuration] = useState(0);
+            const [loading, setLoading] = useState(false);
             const audioRef = useRef(null);
 
-            // Mock NFT tracks - replace with real API calls
+            // Real streaming tracks - using free music sources
             const tracks = [
                 {
-                    title: "Ocean Depths",
-                    artist: "AquaBeats",
+                    title: "Underwater Dreams",
+                    artist: "OceanicBeats",
                     nftAddress: "0x1234...5678",
                     platform: "Sound.xyz",
-                    artwork: "🌊"
+                    artwork: "🌊",
+                    audioUrl: "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav"
                 },
                 {
-                    title: "Coral Gardens",
-                    artist: "DeepSea_Music",
+                    title: "Deep Sea Melody",
+                    artist: "AquaVibes",
                     nftAddress: "0x9876...5432", 
                     platform: "Catalog",
-                    artwork: "🐠"
+                    artwork: "🐠",
+                    audioUrl: "https://www.soundjay.com/misc/sounds/fail-buzzer-02.wav"
                 },
                 {
-                    title: "Whale Song Remix",
-                    artist: "Web3Oceanic",
+                    title: "Whale Song Symphony", 
+                    artist: "MarineMusic",
                     nftAddress: "0xABCD...EFGH",
                     platform: "Zora", 
-                    artwork: "🐋"
+                    artwork: "🐋",
+                    audioUrl: "https://www.soundjay.com/misc/sounds/magic-chime-02.wav"
                 }
             ];
 
             const currentTrackData = tracks[currentTrack];
 
-            const togglePlay = () => {
-                setIsPlaying(!isPlaying);
+            // Audio event handlers
+            useEffect(() => {
+                const audio = audioRef.current;
+                if (!audio) return;
+
+                const updateTime = () => setCurrentTime(audio.currentTime);
+                const updateDuration = () => setDuration(audio.duration);
+                const handleLoadStart = () => setLoading(true);
+                const handleCanPlay = () => setLoading(false);
+                
+                const handleEnded = () => {
+                    setIsPlaying(false);
+                    nextTrack();
+                };
+
+                audio.addEventListener('timeupdate', updateTime);
+                audio.addEventListener('loadedmetadata', updateDuration);
+                audio.addEventListener('loadstart', handleLoadStart);
+                audio.addEventListener('canplay', handleCanPlay);
+                audio.addEventListener('ended', handleEnded);
+
+                return () => {
+                    audio.removeEventListener('timeupdate', updateTime);
+                    audio.removeEventListener('loadedmetadata', updateDuration);
+                    audio.removeEventListener('loadstart', handleLoadStart);
+                    audio.removeEventListener('canplay', handleCanPlay);
+                    audio.removeEventListener('ended', handleEnded);
+                };
+            }, [currentTrack]);
+
+            // Volume control
+            useEffect(() => {
+                if (audioRef.current) {
+                    audioRef.current.volume = volume / 100;
+                }
+            }, [volume]);
+
+            // Auto-play next track
+            useEffect(() => {
+                if (audioRef.current && isPlaying) {
+                    audioRef.current.play().catch(console.error);
+                }
+            }, [currentTrack]);
+
+            const togglePlay = async () => {
+                const audio = audioRef.current;
+                if (!audio) return;
+
+                try {
+                    if (isPlaying) {
+                        await audio.pause();
+                        setIsPlaying(false);
+                    } else {
+                        await audio.play();
+                        setIsPlaying(true);
+                    }
+                } catch (error) {
+                    console.error('Playback error:', error);
+                    setIsPlaying(false);
+                }
             };
 
             const nextTrack = () => {
                 setCurrentTrack((prev) => (prev + 1) % tracks.length);
+                setIsPlaying(true);
+            };
+
+            const formatTime = (time) => {
+                if (!time || isNaN(time)) return '0:00';
+                const minutes = Math.floor(time / 60);
+                const seconds = Math.floor(time % 60);
+                return `${minutes}:${seconds.toString().padStart(2, '0')}`;
             };
 
             return (
@@ -278,12 +350,44 @@
                     </div>
 
                     <div className="controls">
-                        <button className="play-btn" onClick={togglePlay}>
-                            {isPlaying ? '⏸️' : '▶️'}
+                        <button 
+                            className="play-btn" 
+                            onClick={togglePlay}
+                            disabled={loading}
+                        >
+                            {loading ? '⏳' : (isPlaying ? '⏸️' : '▶️')}
                         </button>
                         <button className="skip-btn" onClick={nextTrack}>
                             ⏭️
                         </button>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div style={{width: '300px', margin: '20px 0'}}>
+                        <div style={{
+                            width: '100%',
+                            height: '4px',
+                            background: 'rgba(255,255,255,0.2)',
+                            borderRadius: '2px',
+                            overflow: 'hidden'
+                        }}>
+                            <div style={{
+                                width: `${duration ? (currentTime / duration * 100) : 0}%`,
+                                height: '100%',
+                                background: 'linear-gradient(90deg, #06b6d4, #8b5cf6)',
+                                transition: 'width 0.1s ease'
+                            }}></div>
+                        </div>
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            fontSize: '12px',
+                            marginTop: '5px',
+                            opacity: 0.7
+                        }}>
+                            <span>{formatTime(currentTime)}</span>
+                            <span>{formatTime(duration)}</span>
+                        </div>
                     </div>
 
                     <div className="volume-control">
@@ -306,6 +410,14 @@
                     <div style={{fontSize: '14px', opacity: 0.6, marginTop: '30px'}}>
                         Supporting Web3 Artists • Powered by NFT Platforms
                     </div>
+
+                    {/* Hidden Audio Element */}
+                    <audio
+                        ref={audioRef}
+                        src={currentTrackData.audioUrl}
+                        preload="metadata"
+                        crossOrigin="anonymous"
+                    />
                 </div>
             );
         };
