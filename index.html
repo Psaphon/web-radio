@@ -220,7 +220,7 @@
             const [loading, setLoading] = useState(false);
             const audioRef = useRef(null);
 
-            // Working audio tracks - using CORS proxy for reliable playback
+            // Working audio tracks - tested URLs that actually work
             const tracks = [
                 {
                     title: "Underwater Dreams",
@@ -239,12 +239,12 @@
                     audioUrl: "https://corsproxy.io/?https://freesound.org/data/previews/392/392617_7383104-hq.mp3"
                 },
                 {
-                    title: "Whale Song Symphony", 
+                    title: "Ocean Waves", 
                     artist: "MarineMusic",
                     nftAddress: "0xABCD...EFGH",
                     platform: "Zora", 
                     artwork: "🐋",
-                    audioUrl: "https://corsproxy.io/?https://freesound.org/data/previews/348/348565_6113829-hq.mp3"
+                    audioUrl: "https://corsproxy.io/?https://freesound.org/data/previews/316/316847_4939433-hq.mp3"
                 }
             ];
 
@@ -269,11 +269,11 @@
                     console.error('Audio error:', e.target.error);
                     setLoading(false);
                     setIsPlaying(false);
-                };
-                
-                const handleEnded = () => {
-                    setIsPlaying(false);
-                    nextTrack();
+                    // Try to skip to next track on error
+                    setTimeout(() => {
+                        console.log('Skipping failed track');
+                        nextTrack();
+                    }, 1000);
                 };
 
                 audio.addEventListener('timeupdate', updateTime);
@@ -281,7 +281,6 @@
                 audio.addEventListener('loadstart', handleLoadStart);
                 audio.addEventListener('canplay', handleCanPlay);
                 audio.addEventListener('error', handleError);
-                audio.addEventListener('ended', handleEnded);
 
                 return () => {
                     audio.removeEventListener('timeupdate', updateTime);
@@ -289,7 +288,6 @@
                     audio.removeEventListener('loadstart', handleLoadStart);
                     audio.removeEventListener('canplay', handleCanPlay);
                     audio.removeEventListener('error', handleError);
-                    audio.removeEventListener('ended', handleEnded);
                 };
             }, [currentTrack]);
 
@@ -300,12 +298,50 @@
                 }
             }, [volume]);
 
-            // Auto-play next track
+            // Auto-play next track (but only if we were playing)
             useEffect(() => {
-                if (audioRef.current && isPlaying) {
-                    audioRef.current.play().catch(console.error);
-                }
+                const audio = audioRef.current;
+                if (!audio) return;
+
+                // Small delay to let the new audio source load
+                const playNext = async () => {
+                    if (isPlaying) {
+                        try {
+                            console.log('Auto-playing next track');
+                            await audio.play();
+                        } catch (error) {
+                            console.error('Auto-play failed:', error);
+                            setIsPlaying(false);
+                        }
+                    }
+                };
+
+                // Wait a bit for the audio element to update with new src
+                const timer = setTimeout(playNext, 100);
+                return () => clearTimeout(timer);
             }, [currentTrack]);
+
+            // Handle when a track ends - auto advance
+            useEffect(() => {
+                const audio = audioRef.current;
+                if (!audio) return;
+                
+                const handleEnded = () => {
+                    console.log('Track ended, advancing to next');
+                    const wasPlaying = isPlaying;
+                    nextTrack();
+                    
+                    // Auto-play the next track after a short delay
+                    if (wasPlaying) {
+                        setTimeout(() => {
+                            setIsPlaying(true);
+                        }, 200);
+                    }
+                };
+
+                audio.addEventListener('ended', handleEnded);
+                return () => audio.removeEventListener('ended', handleEnded);
+            }, [isPlaying, currentTrack]);
 
             const togglePlay = async () => {
                 const audio = audioRef.current;
@@ -349,8 +385,21 @@
             };
 
             const nextTrack = () => {
-                setCurrentTrack((prev) => (prev + 1) % tracks.length);
-                setIsPlaying(true);
+                const audio = audioRef.current;
+                if (audio) {
+                    audio.pause();
+                    audio.currentTime = 0;
+                }
+                
+                setIsPlaying(false);
+                setCurrentTime(0);
+                setDuration(0);
+                setLoading(true);
+                
+                const nextIndex = (currentTrack + 1) % tracks.length;
+                setCurrentTrack(nextIndex);
+                
+                console.log('Switching to track:', tracks[nextIndex].title);
             };
 
             const formatTime = (time) => {
