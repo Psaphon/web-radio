@@ -298,29 +298,6 @@
                 }
             }, [volume]);
 
-            // Auto-play next track (but only if we were playing)
-            useEffect(() => {
-                const audio = audioRef.current;
-                if (!audio) return;
-
-                // Small delay to let the new audio source load
-                const playNext = async () => {
-                    if (isPlaying) {
-                        try {
-                            console.log('Auto-playing next track');
-                            await audio.play();
-                        } catch (error) {
-                            console.error('Auto-play failed:', error);
-                            setIsPlaying(false);
-                        }
-                    }
-                };
-
-                // Wait a bit for the audio element to update with new src
-                const timer = setTimeout(playNext, 100);
-                return () => clearTimeout(timer);
-            }, [currentTrack]);
-
             // Handle when a track ends - auto advance
             useEffect(() => {
                 const audio = audioRef.current;
@@ -328,20 +305,48 @@
                 
                 const handleEnded = () => {
                     console.log('Track ended, advancing to next');
-                    const wasPlaying = isPlaying;
-                    nextTrack();
                     
-                    // Auto-play the next track after a short delay
-                    if (wasPlaying) {
-                        setTimeout(() => {
-                            setIsPlaying(true);
-                        }, 200);
-                    }
+                    // Move to next track
+                    const nextIndex = (currentTrack + 1) % tracks.length;
+                    setCurrentTrack(nextIndex);
+                    
+                    // Keep playing state true so it auto-plays
+                    console.log('Will auto-play next track');
                 };
 
                 audio.addEventListener('ended', handleEnded);
                 return () => audio.removeEventListener('ended', handleEnded);
-            }, [isPlaying, currentTrack]);
+            }, [currentTrack]);
+
+            // Auto-play when track changes (if we were playing)
+            useEffect(() => {
+                const audio = audioRef.current;
+                if (!audio || !isPlaying) return;
+
+                console.log('Track changed, attempting auto-play');
+                
+                const attemptAutoPlay = async () => {
+                    try {
+                        // Wait for new audio to load
+                        await new Promise(resolve => {
+                            if (audio.readyState >= 2) {
+                                resolve();
+                            } else {
+                                audio.addEventListener('canplay', resolve, { once: true });
+                            }
+                        });
+                        
+                        console.log('Starting auto-play');
+                        await audio.play();
+                        console.log('Auto-play successful');
+                    } catch (error) {
+                        console.error('Auto-play failed:', error);
+                        setIsPlaying(false);
+                    }
+                };
+
+                attemptAutoPlay();
+            }, [currentTrack]);
 
             const togglePlay = async () => {
                 const audio = audioRef.current;
@@ -385,21 +390,9 @@
             };
 
             const nextTrack = () => {
-                const audio = audioRef.current;
-                if (audio) {
-                    audio.pause();
-                    audio.currentTime = 0;
-                }
-                
-                setIsPlaying(false);
-                setCurrentTime(0);
-                setDuration(0);
-                setLoading(true);
-                
-                const nextIndex = (currentTrack + 1) % tracks.length;
-                setCurrentTrack(nextIndex);
-                
-                console.log('Switching to track:', tracks[nextIndex].title);
+                console.log('Next track button clicked');
+                setCurrentTrack((prev) => (prev + 1) % tracks.length);
+                // Keep isPlaying state as-is so auto-play works
             };
 
             const formatTime = (time) => {
