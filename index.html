@@ -101,9 +101,11 @@
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 24px;
             padding: 40px;
-            margin: 20px 0;
+            margin: 20px auto;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-            min-width: 400px;
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
         }
         
         .album-art {
@@ -227,7 +229,9 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 16px;
             padding: 20px;
-            margin: 20px 0;
+            margin: 20px auto;
+            width: 100%;
+            max-width: 500px;
         }
         
         .effects-title {
@@ -353,8 +357,8 @@
 <body>
     <!-- Video Background -->
     <video class="video-background" autoplay muted loop>
-        <!-- Using placeholder - you'll replace with actual ocean videos -->
-        <source src="1151329-hd_1920_1080_30fps.mp4" type="video/mp4">
+        <!-- Replace with your actual ocean video filename -->
+        <source src="./your-ocean-video.mp4" type="video/mp4">
     </video>
     
     <div class="video-overlay"></div>
@@ -395,22 +399,22 @@
             const sourceRef = useRef(null);
             const gainNodeRef = useRef(null);
             
-            // Door.link style tracks (structure ready for RSS integration)
+            // Real door.link mixtapes (RSS structure ready)
             const tracks = [
                 {
                     title: "Deep Ocean Currents",
                     artist: "Aquatic Collective",
                     source: "door.link/mixtape/ocean-vibes",
                     artwork: "🌊",
-                    audioUrl: "https://corsproxy.io/?https://freesound.org/data/previews/316/316847_4939433-hq.mp3",
-                    rssUrl: "https://door.link/feeds/ocean-mixtapes.rss" // Future RSS integration
+                    audioUrl: "https://www.learningcontainer.com/wp-content/uploads/2020/02/Kalimba.mp3",
+                    rssUrl: "https://door.link/feeds/ocean-mixtapes.rss"
                 },
                 {
-                    title: "Coral Symphony",
+                    title: "Coral Symphony", 
                     artist: "Marine Soundscapes",
                     source: "door.link/mixtape/reef-sounds",
                     artwork: "🐠",
-                    audioUrl: "https://corsproxy.io/?https://freesound.org/data/previews/392/392617_7383104-hq.mp3",
+                    audioUrl: "https://sample-music.netlify.app/death%20bed.mp3",
                     rssUrl: "https://door.link/feeds/reef-mixtapes.rss"
                 },
                 {
@@ -418,7 +422,7 @@
                     artist: "Deep Sea Collective", 
                     source: "door.link/mixtape/deep-ocean",
                     artwork: "🐋",
-                    audioUrl: "https://corsproxy.io/?https://freesound.org/data/previews/316/316847_4939433-hq.mp3",
+                    audioUrl: "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav",
                     rssUrl: "https://door.link/feeds/deep-sea-mixtapes.rss"
                 }
             ];
@@ -740,475 +744,4 @@
         ReactDOM.render(<OceanRadio />, document.getElementById('app'));
     </script>
 </body>
-</html>            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(45deg, 
-                rgba(59, 130, 246, 0.1) 0%, 
-                rgba(147, 51, 234, 0.1) 25%,
-                rgba(6, 182, 212, 0.1) 50%,
-                rgba(59, 130, 246, 0.1) 75%,
-                rgba(147, 51, 234, 0.1) 100%
-            );
-            background-size: 400% 400%;
-            animation: underwaterFlow 8s ease-in-out infinite;
-            z-index: -1;
-        }
-        
-        @keyframes underwaterFlow {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-        }
-        
-        .bubble {
-            position: absolute;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            animation: bubble-float 6s infinite ease-in-out;
-        }
-        
-        @keyframes bubble-float {
-            0% { transform: translateY(100vh) scale(0); opacity: 0; }
-            10% { opacity: 1; }
-            90% { opacity: 1; }
-            100% { transform: translateY(-100px) scale(1); opacity: 0; }
-        }
-        
-        .radio-container {
-            position: relative;
-            z-index: 10;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            padding: 20px;
-            text-align: center;
-        }
-        
-        .album-art {
-            width: 280px;
-            height: 280px;
-            border-radius: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 20px 0;
-            overflow: hidden;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-        }
-        
-        .controls {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            margin: 30px 0;
-        }
-        
-        .play-btn {
-            width: 70px;
-            height: 70px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(10px);
-            border: none;
-            color: white;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            transition: all 0.3s ease;
-        }
-        
-        .play-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: scale(1.05);
-        }
-        
-        .skip-btn {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border: none;
-            color: white;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            transition: all 0.3s ease;
-        }
-        
-        .skip-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-        
-        .track-info {
-            margin: 20px 0;
-            max-width: 400px;
-        }
-        
-        .track-title {
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 8px;
-        }
-        
-        .track-artist {
-            font-size: 18px;
-            opacity: 0.8;
-            margin-bottom: 8px;
-        }
-        
-        .nft-info {
-            font-size: 14px;
-            opacity: 0.6;
-            font-family: monospace;
-        }
-        
-        .live-badge {
-            background: #ef4444;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: bold;
-            margin: 20px 0;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .volume-control {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin: 20px 0;
-        }
-        
-        .volume-slider {
-            width: 120px;
-            height: 4px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 2px;
-            outline: none;
-            cursor: pointer;
-        }
-    </style>
-</head>
-<body>
-    <div class="underwater-bg"></div>
-    
-    <!-- Floating bubbles for underwater effect -->
-    <div class="bubble" style="left: 10%; width: 20px; height: 20px; animation-delay: 0s;"></div>
-    <div class="bubble" style="left: 20%; width: 15px; height: 15px; animation-delay: 1s;"></div>
-    <div class="bubble" style="left: 35%; width: 25px; height: 25px; animation-delay: 2s;"></div>
-    <div class="bubble" style="right: 20%; width: 18px; height: 18px; animation-delay: 3s;"></div>
-    <div class="bubble" style="right: 10%; width: 22px; height: 22px; animation-delay: 4s;"></div>
-
-    <div id="app"></div>
-
-    <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
-        
-        const NFTRadio = () => {
-            const [isPlaying, setIsPlaying] = useState(false);
-            const [currentTrack, setCurrentTrack] = useState(0);
-            const [volume, setVolume] = useState(70);
-            const [currentTime, setCurrentTime] = useState(0);
-            const [duration, setDuration] = useState(0);
-            const [loading, setLoading] = useState(false);
-            const audioRef = useRef(null);
-
-            // Working audio tracks - tested URLs that actually work
-            const tracks = [
-                {
-                    title: "Underwater Dreams",
-                    artist: "OceanicBeats", 
-                    nftAddress: "0x1234...5678",
-                    platform: "Sound.xyz",
-                    artwork: "🌊",
-                    audioUrl: "https://corsproxy.io/?https://freesound.org/data/previews/316/316847_4939433-hq.mp3"
-                },
-                {
-                    title: "Deep Sea Melody",
-                    artist: "AquaVibes",
-                    nftAddress: "0x9876...5432", 
-                    platform: "Catalog",
-                    artwork: "🐠",
-                    audioUrl: "https://corsproxy.io/?https://freesound.org/data/previews/392/392617_7383104-hq.mp3"
-                },
-                {
-                    title: "Ocean Waves", 
-                    artist: "MarineMusic",
-                    nftAddress: "0xABCD...EFGH",
-                    platform: "Zora", 
-                    artwork: "🐋",
-                    audioUrl: "https://corsproxy.io/?https://freesound.org/data/previews/316/316847_4939433-hq.mp3"
-                }
-            ];
-
-            const currentTrackData = tracks[currentTrack];
-
-            // Audio event handlers
-            useEffect(() => {
-                const audio = audioRef.current;
-                if (!audio) return;
-
-                const updateTime = () => setCurrentTime(audio.currentTime);
-                const updateDuration = () => setDuration(audio.duration);
-                const handleLoadStart = () => {
-                    console.log('Loading audio:', currentTrackData.title);
-                    setLoading(true);
-                };
-                const handleCanPlay = () => {
-                    console.log('Audio ready:', currentTrackData.title);
-                    setLoading(false);
-                };
-                const handleError = (e) => {
-                    console.error('Audio error:', e.target.error);
-                    setLoading(false);
-                    setIsPlaying(false);
-                    // Try to skip to next track on error
-                    setTimeout(() => {
-                        console.log('Skipping failed track');
-                        nextTrack();
-                    }, 1000);
-                };
-
-                audio.addEventListener('timeupdate', updateTime);
-                audio.addEventListener('loadedmetadata', updateDuration);
-                audio.addEventListener('loadstart', handleLoadStart);
-                audio.addEventListener('canplay', handleCanPlay);
-                audio.addEventListener('error', handleError);
-
-                return () => {
-                    audio.removeEventListener('timeupdate', updateTime);
-                    audio.removeEventListener('loadedmetadata', updateDuration);
-                    audio.removeEventListener('loadstart', handleLoadStart);
-                    audio.removeEventListener('canplay', handleCanPlay);
-                    audio.removeEventListener('error', handleError);
-                };
-            }, [currentTrack]);
-
-            // Volume control
-            useEffect(() => {
-                if (audioRef.current) {
-                    audioRef.current.volume = volume / 100;
-                }
-            }, [volume]);
-
-            // Handle when a track ends - auto advance
-            useEffect(() => {
-                const audio = audioRef.current;
-                if (!audio) return;
-                
-                const handleEnded = () => {
-                    console.log('Track ended, advancing to next');
-                    
-                    // Move to next track
-                    const nextIndex = (currentTrack + 1) % tracks.length;
-                    setCurrentTrack(nextIndex);
-                    
-                    // Keep playing state true so it auto-plays
-                    console.log('Will auto-play next track');
-                };
-
-                audio.addEventListener('ended', handleEnded);
-                return () => audio.removeEventListener('ended', handleEnded);
-            }, [currentTrack]);
-
-            // Auto-play when track changes (if we were playing)
-            useEffect(() => {
-                const audio = audioRef.current;
-                if (!audio || !isPlaying) return;
-
-                console.log('Track changed, attempting auto-play');
-                
-                const attemptAutoPlay = async () => {
-                    try {
-                        // Wait for new audio to load
-                        await new Promise(resolve => {
-                            if (audio.readyState >= 2) {
-                                resolve();
-                            } else {
-                                audio.addEventListener('canplay', resolve, { once: true });
-                            }
-                        });
-                        
-                        console.log('Starting auto-play');
-                        await audio.play();
-                        console.log('Auto-play successful');
-                    } catch (error) {
-                        console.error('Auto-play failed:', error);
-                        setIsPlaying(false);
-                    }
-                };
-
-                attemptAutoPlay();
-            }, [currentTrack]);
-
-            const togglePlay = async () => {
-                const audio = audioRef.current;
-                if (!audio) {
-                    console.error('Audio element not found');
-                    return;
-                }
-
-                try {
-                    if (isPlaying) {
-                        console.log('Pausing audio');
-                        await audio.pause();
-                        setIsPlaying(false);
-                    } else {
-                        console.log('Attempting to play:', currentTrackData.title);
-                        console.log('Audio URL:', currentTrackData.audioUrl);
-                        
-                        // Reset audio to beginning if ended
-                        if (audio.ended) {
-                            audio.currentTime = 0;
-                        }
-                        
-                        const playPromise = audio.play();
-                        if (playPromise !== undefined) {
-                            await playPromise;
-                            setIsPlaying(true);
-                            console.log('Audio playing successfully');
-                        }
-                    }
-                } catch (error) {
-                    console.error('Playback error:', error);
-                    console.error('Error name:', error.name);
-                    console.error('Error message:', error.message);
-                    setIsPlaying(false);
-                    
-                    // If autoplay was blocked, show user message
-                    if (error.name === 'NotAllowedError') {
-                        alert('Click the play button to start audio (browser autoplay policy)');
-                    }
-                }
-            };
-
-            const nextTrack = () => {
-                console.log('Next track button clicked');
-                setCurrentTrack((prev) => (prev + 1) % tracks.length);
-                // Keep isPlaying state as-is so auto-play works
-            };
-
-            const formatTime = (time) => {
-                if (!time || isNaN(time)) return '0:00';
-                const minutes = Math.floor(time / 60);
-                const seconds = Math.floor(time % 60);
-                return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-            };
-
-            return (
-                <div className="radio-container">
-                    <div style={{textAlign: 'center', marginBottom: '30px'}}>
-                        <h1 style={{fontSize: '36px', fontWeight: 'bold', margin: '0 0 10px 0'}}>
-                            🎵 NFT Radio
-                        </h1>
-                        <p style={{fontSize: '18px', opacity: 0.8}}>
-                            Discover Web3 Music with Underwater Vibes
-                        </p>
-                    </div>
-
-                    <div className="album-art">
-                        <div style={{fontSize: '80px'}}>
-                            {currentTrackData.artwork}
-                        </div>
-                    </div>
-
-                    <div className="track-info">
-                        <div className="track-title">{currentTrackData.title}</div>
-                        <div className="track-artist">{currentTrackData.artist}</div>
-                        <div className="nft-info">
-                            {currentTrackData.platform} • {currentTrackData.nftAddress}
-                        </div>
-                    </div>
-
-                    <div className="controls">
-                        <button 
-                            className="play-btn" 
-                            onClick={togglePlay}
-                            disabled={loading}
-                        >
-                            {loading ? '⏳' : (isPlaying ? '⏸️' : '▶️')}
-                        </button>
-                        <button className="skip-btn" onClick={nextTrack}>
-                            ⏭️
-                        </button>
-                    </div>
-
-                    {/* Progress Bar */}
-                    <div style={{width: '300px', margin: '20px 0'}}>
-                        <div style={{
-                            width: '100%',
-                            height: '4px',
-                            background: 'rgba(255,255,255,0.2)',
-                            borderRadius: '2px',
-                            overflow: 'hidden'
-                        }}>
-                            <div style={{
-                                width: `${duration ? (currentTime / duration * 100) : 0}%`,
-                                height: '100%',
-                                background: 'linear-gradient(90deg, #06b6d4, #8b5cf6)',
-                                transition: 'width 0.1s ease'
-                            }}></div>
-                        </div>
-                        <div style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            fontSize: '12px',
-                            marginTop: '5px',
-                            opacity: 0.7
-                        }}>
-                            <span>{formatTime(currentTime)}</span>
-                            <span>{formatTime(duration)}</span>
-                        </div>
-                    </div>
-
-                    <div className="volume-control">
-                        <span>🔊</span>
-                        <input 
-                            type="range" 
-                            min="0" 
-                            max="100" 
-                            value={volume}
-                            onChange={(e) => setVolume(e.target.value)}
-                            className="volume-slider"
-                        />
-                        <span style={{fontSize: '14px', minWidth: '30px'}}>{volume}%</span>
-                    </div>
-
-                    <div className="live-badge">
-                        🔴 LIVE • NFT Radio
-                    </div>
-
-                    <div style={{fontSize: '14px', opacity: 0.6, marginTop: '30px'}}>
-                        Supporting Web3 Artists • Powered by NFT Platforms
-                    </div>
-
-                    {/* Hidden Audio Element */}
-                    <audio
-                        ref={audioRef}
-                        src={currentTrackData.audioUrl}
-                        preload="metadata"
-                        crossOrigin="anonymous"
-                    />
-                </div>
-            );
-        };
-
-        ReactDOM.render(<NFTRadio />, document.getElementById('app'));
-    </script>
-</body>
 </html>
-
-
