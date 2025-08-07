@@ -333,6 +333,17 @@
             font-weight: bold;
             color: #4ade80;
         }
+
+        /* Error/Loading States */
+        .error-message {
+            background: rgba(255, 100, 100, 0.1);
+            border: 1px solid rgba(255, 100, 100, 0.3);
+            border-radius: 8px;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 14px;
+            text-align: center;
+        }
         
         /* Responsive */
         @media (max-width: 768px) {
@@ -357,7 +368,6 @@
 <body>
     <!-- Video Background -->
     <video class="video-background" autoplay muted loop>
-        <!-- Replace with your actual ocean video filename -->
         <source src="./fishswimming.mp4" type="video/mp4">
     </video>
     
@@ -375,23 +385,25 @@
             const [currentTime, setCurrentTime] = useState(0);
             const [duration, setDuration] = useState(0);
             const [loading, setLoading] = useState(false);
+            const [error, setError] = useState(null);
+            const [rssData, setRssData] = useState(null);
             
             // Audio Effects State
             const [effects, setEffects] = useState({
-                speed: 100,      // 50-150 (0.5x to 1.5x speed)
-                pitch: 100,      // 50-150 (pitch shift)
-                reverb: 0,       // 0-100 (reverb amount)
-                distortion: 0,   // 0-100 (distortion amount)
-                lowpass: 100,    // 0-100 (low pass filter)
-                volume: 70       // 0-100 (volume)
+                speed: 100,
+                pitch: 100,
+                reverb: 0,
+                distortion: 0,
+                lowpass: 100,
+                volume: 70
             });
             
-            // Ocean Health Simulation (for future AI integration)
+            // Ocean Health Simulation
             const [oceanHealth, setOceanHealth] = useState({
-                waterQuality: 85,    // 0-100
-                temperature: 22.5,   // Celsius
-                ph: 8.1,            // pH level
-                oxygenLevel: 92     // 0-100%
+                waterQuality: 85,
+                temperature: 22.5,
+                ph: 8.1,
+                oxygenLevel: 92
             });
             
             const audioRef = useRef(null);
@@ -399,37 +411,80 @@
             const sourceRef = useRef(null);
             const gainNodeRef = useRef(null);
             
-            // Real door.link mixtapes (RSS structure ready)
+            // Updated tracks with working audio URLs and RSS functionality
             const tracks = [
                 {
                     title: "Deep Ocean Currents",
                     artist: "Aquatic Collective",
                     source: "door.link/mixtape/ocean-vibes",
                     artwork: "🌊",
-                    audioUrl: "https://www.learningcontainer.com/wp-content/uploads/2020/02/Kalimba.mp3",
-                    rssUrl: "https://door.link/feeds/ocean-mixtapes.rss"
+                    audioUrl: "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav",
+                    rssUrl: "https://feeds.simplecast.com/54nAGcIl" // Real podcast RSS
                 },
                 {
                     title: "Coral Symphony", 
                     artist: "Marine Soundscapes",
                     source: "door.link/mixtape/reef-sounds",
                     artwork: "🐠",
-                    audioUrl: "https://sample-music.netlify.app/death%20bed.mp3",
-                    rssUrl: "https://door.link/feeds/reef-mixtapes.rss"
+                    audioUrl: "https://sample-videos.com/zip/10/mp3/mp3-sample-1.mp3",
+                    rssUrl: "https://feeds.transistor.fm/react-podcast" // Real RSS feed
                 },
                 {
                     title: "Abyssal Rhythms",
                     artist: "Deep Sea Collective", 
                     source: "door.link/mixtape/deep-ocean",
                     artwork: "🐋",
-                    audioUrl: "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav",
-                    rssUrl: "https://door.link/feeds/deep-sea-mixtapes.rss"
+                    audioUrl: "https://www.soundjay.com/misc/sounds/clock-ticking-3.wav",
+                    rssUrl: "https://rss.cnn.com/rss/edition.rss" // Real RSS feed
                 }
             ];
 
             const currentTrackData = tracks[currentTrack];
 
-            // Initialize Web Audio API for effects
+            // RSS Feed Fetcher with CORS proxy
+            const fetchRSSFeed = async (rssUrl) => {
+                try {
+                    setError(null);
+                    console.log('Fetching RSS:', rssUrl);
+                    
+                    // Using allorigins.win as CORS proxy
+                    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}`;
+                    
+                    const response = await fetch(proxyUrl);
+                    if (!response.ok) {
+                        throw new Error(`RSS fetch failed: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    console.log('RSS data received:', data);
+                    
+                    // Parse the RSS XML
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(data.contents, 'text/xml');
+                    
+                    // Extract RSS information
+                    const title = xmlDoc.querySelector('channel > title')?.textContent || 'Unknown Feed';
+                    const description = xmlDoc.querySelector('channel > description')?.textContent || '';
+                    const items = Array.from(xmlDoc.querySelectorAll('item')).slice(0, 5).map(item => ({
+                        title: item.querySelector('title')?.textContent || 'Untitled',
+                        description: item.querySelector('description')?.textContent || '',
+                        link: item.querySelector('link')?.textContent || '',
+                        pubDate: item.querySelector('pubDate')?.textContent || ''
+                    }));
+                    
+                    setRssData({
+                        feedTitle: title,
+                        feedDescription: description,
+                        items: items
+                    });
+                    
+                } catch (error) {
+                    console.error('RSS fetch error:', error);
+                    setError(`RSS Error: ${error.message}`);
+                }
+            };
+
+            // Initialize Web Audio API
             useEffect(() => {
                 if (!audioContextRef.current && audioRef.current) {
                     try {
@@ -440,21 +495,22 @@
                         sourceRef.current.connect(gainNodeRef.current);
                         gainNodeRef.current.connect(audioContextRef.current.destination);
                     } catch (error) {
-                        console.log('Web Audio API not supported:', error);
+                        console.warn('Web Audio API not supported:', error);
                     }
                 }
             }, []);
 
-            // Audio event handlers
+            // Audio event handlers with better error handling
             useEffect(() => {
                 const audio = audioRef.current;
                 if (!audio) return;
 
                 const updateTime = () => setCurrentTime(audio.currentTime);
-                const updateDuration = () => setDuration(audio.duration);
+                const updateDuration = () => setDuration(audio.duration || 0);
                 const handleLoadStart = () => {
                     console.log('Loading:', currentTrackData.title);
                     setLoading(true);
+                    setError(null);
                 };
                 const handleCanPlay = () => {
                     console.log('Ready:', currentTrackData.title);
@@ -464,6 +520,12 @@
                     console.error('Audio error:', e.target.error);
                     setLoading(false);
                     setIsPlaying(false);
+                    setError('Audio failed to load. Trying next track...');
+                    
+                    // Auto-advance to next track on error
+                    setTimeout(() => {
+                        setCurrentTrack(prev => (prev + 1) % tracks.length);
+                    }, 2000);
                 };
 
                 audio.addEventListener('timeupdate', updateTime);
@@ -506,7 +568,17 @@
                             if (audio.readyState >= 2) {
                                 resolve();
                             } else {
-                                audio.addEventListener('canplay', resolve, { once: true });
+                                const handleCanPlay = () => {
+                                    audio.removeEventListener('canplay', handleCanPlay);
+                                    resolve();
+                                };
+                                audio.addEventListener('canplay', handleCanPlay);
+                                
+                                // Timeout after 5 seconds
+                                setTimeout(() => {
+                                    audio.removeEventListener('canplay', handleCanPlay);
+                                    resolve();
+                                }, 5000);
                             }
                         });
                         
@@ -515,6 +587,7 @@
                     } catch (error) {
                         console.error('Auto-play failed:', error);
                         setIsPlaying(false);
+                        setError('Auto-play blocked. Click play to continue.');
                     }
                 };
 
@@ -526,19 +599,22 @@
                 const audio = audioRef.current;
                 if (!audio) return;
 
-                // Apply playback rate (speed)
                 audio.playbackRate = effects.speed / 100;
-
-                // Apply volume
                 audio.volume = effects.volume / 100;
 
-                // Web Audio API effects would go here
                 if (gainNodeRef.current) {
                     gainNodeRef.current.gain.value = effects.volume / 100;
                 }
             }, [effects]);
 
-            // Simulate ocean health affecting audio (future AI integration point)
+            // Fetch RSS when track changes
+            useEffect(() => {
+                if (currentTrackData.rssUrl) {
+                    fetchRSSFeed(currentTrackData.rssUrl);
+                }
+            }, [currentTrack]);
+
+            // Ocean health simulation
             useEffect(() => {
                 const simulateOceanData = () => {
                     setOceanHealth(prev => ({
@@ -559,21 +635,28 @@
                 if (!audio) return;
 
                 try {
+                    if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+                        await audioContextRef.current.resume();
+                    }
+
                     if (isPlaying) {
                         await audio.pause();
                         setIsPlaying(false);
                     } else {
                         await audio.play();
                         setIsPlaying(true);
+                        setError(null);
                     }
                 } catch (error) {
                     console.error('Playback error:', error);
                     setIsPlaying(false);
+                    setError('Playback failed. Try again or switch tracks.');
                 }
             };
 
             const nextTrack = () => {
                 setCurrentTrack((prev) => (prev + 1) % tracks.length);
+                setError(null);
             };
 
             const updateEffect = (effectName, value) => {
@@ -608,6 +691,12 @@
                             <div className="track-source">{currentTrackData.source}</div>
                         </div>
 
+                        {error && (
+                            <div className="error-message">
+                                {error}
+                            </div>
+                        )}
+
                         <div className="main-controls">
                             <button className="control-btn" onClick={nextTrack}>
                                 ⏭️
@@ -639,6 +728,29 @@
                             </div>
                         </div>
                     </div>
+
+                    {/* RSS Feed Display */}
+                    {rssData && (
+                        <div className="effects-panel">
+                            <div className="effects-title">📡 RSS Feed: {rssData.feedTitle}</div>
+                            {rssData.items.map((item, index) => (
+                                <div key={index} style={{
+                                    background: 'rgba(255,255,255,0.05)',
+                                    padding: '8px',
+                                    margin: '5px 0',
+                                    borderRadius: '6px',
+                                    fontSize: '12px'
+                                }}>
+                                    <div style={{fontWeight: 'bold', marginBottom: '4px'}}>
+                                        {item.title}
+                                    </div>
+                                    <div style={{opacity: 0.7}}>
+                                        {item.description.substring(0, 100)}...
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
 
                     {/* Audio Effects Panel */}
                     <div className="effects-panel">
@@ -697,7 +809,7 @@
                         </div>
                     </div>
 
-                    {/* Ocean Health Monitor (Future AI Integration) */}
+                    {/* Ocean Health Monitor */}
                     <div className="sensor-preview">
                         <div className="sensor-title">🌊 Ocean Health Monitor (Future AI Integration)</div>
                         <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px'}}>
@@ -728,6 +840,9 @@
                         <div className="status-item">
                             🎵 <span>door.link mixtapes</span>
                         </div>
+                        <div className="status-item">
+                            📡 <span>RSS: {rssData ? 'Connected' : 'Loading...'}</span>
+                        </div>
                     </div>
 
                     {/* Hidden Audio Element */}
@@ -745,4 +860,3 @@
     </script>
 </body>
 </html>
-
