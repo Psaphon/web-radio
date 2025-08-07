@@ -5,15 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ocean Radio - Live Ocean Health Experience</title>
     
-    <!-- Minimal CSP for functionality -->
-    <meta http-equiv="Content-Security-Policy" content="
-        default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:;
-        script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com;
-        connect-src 'self' https: wss:;
-        media-src 'self' https: data:;
-        img-src 'self' https: data:;
-    ">
-    
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌊</text></svg>">
     
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -44,16 +35,33 @@
             z-index: -1;
         }
         
-        .ocean-webcam {
+        .ocean-video {
             width: 100%;
             height: 100%;
             object-fit: cover;
         }
         
-        .fallback-video {
+        /* Fallback animated background if no video */
+        .ocean-fallback {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            background: linear-gradient(
+                45deg,
+                #001122 0%,
+                #003366 25%,
+                #004488 50%,
+                #0066aa 75%,
+                #003366 100%
+            );
+            background-size: 400% 400%;
+            animation: oceanWave 15s ease-in-out infinite;
+        }
+        
+        @keyframes oceanWave {
+            0%, 100% { background-position: 0% 50%; }
+            25% { background-position: 100% 50%; }
+            50% { background-position: 100% 100%; }
+            75% { background-position: 0% 100%; }
         }
         
         /* Gradient overlay for readability */
@@ -65,9 +73,9 @@
             height: 100vh;
             background: linear-gradient(
                 180deg,
-                rgba(0, 20, 40, 0.1) 0%,
-                rgba(0, 50, 100, 0.2) 50%,
-                rgba(0, 30, 60, 0.4) 100%
+                rgba(0, 20, 40, 0.2) 0%,
+                rgba(0, 50, 100, 0.3) 50%,
+                rgba(0, 30, 60, 0.5) 100%
             );
             z-index: 1;
         }
@@ -100,6 +108,8 @@
             align-items: center;
             justify-content: space-between;
             margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
         }
         
         .app-title {
@@ -174,6 +184,7 @@
             display: flex;
             align-items: center;
             gap: 20px;
+            flex-wrap: wrap;
         }
         
         .album-art {
@@ -190,24 +201,18 @@
         
         .track-info {
             flex: 1;
-            min-width: 0;
+            min-width: 200px;
         }
         
         .track-title {
             font-size: 16px;
             font-weight: bold;
             margin-bottom: 4px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
         }
         
         .track-subtitle {
             font-size: 12px;
             opacity: 0.8;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
         }
         
         .player-controls {
@@ -236,6 +241,11 @@
             transform: scale(1.1);
         }
         
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
         .play-btn {
             width: 50px;
             height: 50px;
@@ -254,6 +264,7 @@
             border-radius: 12px;
             padding: 15px;
             text-align: center;
+            min-width: 120px;
         }
         
         .effects-title {
@@ -276,21 +287,61 @@
         }
         
         @keyframes visualize {
-            0%, 100% { transform: scale(1); opacity: 0.8; }
-            50% { transform: scale(1.2); opacity: 1; }
+            0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.8; }
+            50% { transform: scale(1.2) rotate(180deg); opacity: 1; }
         }
         
         .distortion-level {
             font-size: 12px;
             opacity: 0.9;
+            margin-bottom: 5px;
+        }
+        
+        .health-status {
+            font-size: 10px;
+            opacity: 0.7;
+        }
+        
+        .error-message {
+            background: rgba(255, 100, 100, 0.2);
+            border: 1px solid rgba(255, 100, 100, 0.4);
+            border-radius: 8px;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 12px;
+        }
+        
+        .info-message {
+            background: rgba(100, 200, 255, 0.2);
+            border: 1px solid rgba(100, 200, 255, 0.4);
+            border-radius: 8px;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 12px;
         }
         
         /* Mobile responsive */
         @media (max-width: 768px) {
-            .ocean-status, .music-player, .audio-effects {
+            .ocean-status, .music-player {
                 left: 10px;
                 right: 10px;
                 padding: 15px;
+            }
+            
+            .audio-effects {
+                position: static;
+                transform: none;
+                margin: 10px;
+                width: calc(100% - 20px);
+            }
+            
+            .status-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .app-title {
+                font-size: 20px;
             }
             
             .player-content {
@@ -303,12 +354,9 @@
                 font-size: 20px;
             }
             
-            .audio-effects {
-                position: relative;
-                top: auto;
-                right: auto;
-                transform: none;
-                margin: 10px;
+            .ocean-metrics {
+                grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+                gap: 10px;
             }
         }
     </style>
@@ -316,22 +364,13 @@
 <body>
     <!-- Ocean Video Background -->
     <div class="ocean-background">
-        <!-- Try to use live ocean webcam, fallback to local video -->
-        <iframe 
-            class="ocean-webcam" 
-            src="https://explore.org/livecams/coral-reefs/deep-sea-coral-reef-cam"
-            frameborder="0" 
-            allowfullscreen
-            style="pointer-events: none;"
-            onerror="this.style.display='none'; document.querySelector('.fallback-video').style.display='block';">
-        </iframe>
-        
-        <!-- Fallback local video -->
-        <video class="fallback-video" autoplay muted loop style="display: none;">
+        <!-- Try to use your local video first -->
+        <video class="ocean-video" autoplay muted loop id="oceanVideo">
             <source src="./fishswimming.mp4" type="video/mp4">
-            <!-- Fallback gradient if no video -->
-            <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #001122, #003366, #004488);"></div>
         </video>
+        
+        <!-- Animated fallback background -->
+        <div class="ocean-fallback" id="oceanFallback" style="display: none;"></div>
     </div>
     
     <div class="ocean-overlay"></div>
@@ -348,13 +387,15 @@
                 pH: 8.1,
                 oxygen: 87,
                 pollution: 23,
-                location: "Coral City, Miami FL"
+                location: "Miami Coral Reef"
             });
             
             // Music player state
             const [currentTrack, setCurrentTrack] = useState(0);
             const [isPlaying, setIsPlaying] = useState(false);
             const [audioContext, setAudioContext] = useState(null);
+            const [error, setError] = useState(null);
+            const [loading, setLoading] = useState(false);
             const [audioEffects, setAudioEffects] = useState({
                 distortion: 0.2,
                 reverb: 0.3,
@@ -364,51 +405,77 @@
             const audioRef = useRef(null);
             const gainNodeRef = useRef(null);
             
-            // Ocean-themed tracks (using data sonification concept)
+            // Real music tracks - you'll replace these URLs with actual music
             const tracks = [
                 {
-                    title: "Ocean Heartbeat",
-                    artist: "Generated from live sensor data",
+                    title: "Ocean Currents",
+                    artist: "Environmental Audio",
                     artwork: "🌊",
-                    type: "sonification"
+                    url: "https://www.learningcontainer.com/wp-content/uploads/2020/02/Kalimba.mp3"
                 },
                 {
-                    title: "Coral Reef Symphony",
-                    artist: "Miami Reef Sensors",
+                    title: "Coral Garden",
+                    artist: "Marine Sounds",
                     artwork: "🐠",
-                    type: "environmental"
+                    url: "https://sample-music.netlify.app/death%20bed.mp3"
                 },
                 {
-                    title: "Deep Current Flow",
-                    artist: "Ocean Observatory Network",
+                    title: "Deep Blue",
+                    artist: "Ocean Symphony",
                     artwork: "🌀",
-                    type: "data-driven"
+                    url: "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav"
                 }
             ];
             
             const currentTrackData = tracks[currentTrack];
             
+            // Check if video loads, show fallback if not
+            useEffect(() => {
+                const video = document.getElementById('oceanVideo');
+                const fallback = document.getElementById('oceanFallback');
+                
+                if (video) {
+                    video.onerror = () => {
+                        console.log('Video failed to load, showing animated fallback');
+                        video.style.display = 'none';
+                        if (fallback) fallback.style.display = 'block';
+                    };
+                    
+                    video.onloadstart = () => {
+                        console.log('Video started loading');
+                    };
+                    
+                    video.oncanplay = () => {
+                        console.log('Video ready to play');
+                        if (fallback) fallback.style.display = 'none';
+                    };
+                }
+            }, []);
+            
             // Simulate real ocean data updates
             useEffect(() => {
                 const updateOceanData = () => {
                     setOceanData(prev => {
-                        const newTemp = 20 + Math.random() * 8; // 20-28°C range
-                        const newPH = 7.8 + Math.random() * 0.6; // 7.8-8.4 range
-                        const newOxygen = 75 + Math.random() * 25; // 75-100% range
-                        const newPollution = Math.random() * 40; // 0-40% range
+                        // Simulate realistic ocean sensor readings
+                        const tempVariation = (Math.random() - 0.5) * 0.5; // ±0.25°C change
+                        const pHVariation = (Math.random() - 0.5) * 0.02; // ±0.01 pH change
+                        const oxygenVariation = (Math.random() - 0.5) * 2; // ±1% change
+                        const pollutionVariation = (Math.random() - 0.5) * 1; // ±0.5% change
                         
                         return {
-                            temperature: parseFloat(newTemp.toFixed(1)),
-                            pH: parseFloat(newPH.toFixed(2)),
-                            oxygen: Math.round(newOxygen),
-                            pollution: Math.round(newPollution),
+                            temperature: Math.max(18, Math.min(30, prev.temperature + tempVariation)),
+                            pH: Math.max(7.5, Math.min(8.5, prev.pH + pHVariation)),
+                            oxygen: Math.max(60, Math.min(100, prev.oxygen + oxygenVariation)),
+                            pollution: Math.max(0, Math.min(50, prev.pollution + pollutionVariation)),
                             location: prev.location
                         };
                     });
                 };
                 
-                // Update every 10 seconds to simulate real sensor data
-                const interval = setInterval(updateOceanData, 10000);
+                // Update every 15 seconds to simulate real sensor data
+                const interval = setInterval(updateOceanData, 15000);
+                updateOceanData(); // Initial update
+                
                 return () => clearInterval(interval);
             }, []);
             
@@ -416,87 +483,132 @@
             useEffect(() => {
                 const healthScore = calculateOceanHealth(oceanData);
                 
-                setAudioEffects({
-                    distortion: (100 - healthScore) / 100 * 0.5, // More distortion = worse health
-                    reverb: oceanData.temperature > 25 ? 0.6 : 0.2, // Warmer = more reverb
-                    speed: 0.8 + (healthScore / 100) * 0.4 // Healthier = faster tempo
-                });
+                setAudioEffects(prev => ({
+                    distortion: (100 - healthScore) / 200, // 0-0.5 range
+                    reverb: oceanData.temperature > 25 ? 0.6 : 0.2,
+                    speed: 0.85 + (healthScore / 200) // 0.85-1.35 range
+                }));
             }, [oceanData]);
             
             // Apply audio effects to playback
             useEffect(() => {
-                if (audioRef.current && audioContext) {
-                    // This would apply real-time audio processing
-                    audioRef.current.playbackRate = audioEffects.speed;
-                    
-                    if (gainNodeRef.current) {
-                        // Simulate health-based volume modulation
-                        const healthScore = calculateOceanHealth(oceanData);
-                        gainNodeRef.current.gain.value = 0.5 + (healthScore / 200);
+                if (audioRef.current) {
+                    try {
+                        audioRef.current.playbackRate = audioEffects.speed;
+                        
+                        if (gainNodeRef.current) {
+                            const healthScore = calculateOceanHealth(oceanData);
+                            gainNodeRef.current.gain.value = 0.3 + (healthScore / 200);
+                        }
+                    } catch (error) {
+                        console.warn('Audio effects error:', error);
                     }
                 }
-            }, [audioEffects, audioContext, oceanData]);
+            }, [audioEffects, oceanData]);
             
             const calculateOceanHealth = (data) => {
-                // Simple health calculation (0-100)
-                const tempScore = data.temperature >= 20 && data.temperature <= 26 ? 100 : 50;
-                const pHScore = data.pH >= 8.0 && data.pH <= 8.3 ? 100 : 70;
-                const oxygenScore = data.oxygen;
-                const pollutionScore = 100 - data.pollution;
+                // Calculate health score (0-100) based on ideal ranges
+                let score = 0;
                 
-                return Math.round((tempScore + pHScore + oxygenScore + pollutionScore) / 4);
+                // Temperature: ideal 20-26°C
+                if (data.temperature >= 20 && data.temperature <= 26) score += 25;
+                else if (data.temperature >= 18 && data.temperature <= 28) score += 15;
+                else score += 5;
+                
+                // pH: ideal 8.0-8.3
+                if (data.pH >= 8.0 && data.pH <= 8.3) score += 25;
+                else if (data.pH >= 7.8 && data.pH <= 8.4) score += 15;
+                else score += 5;
+                
+                // Oxygen: higher is better
+                score += Math.min(25, data.oxygen * 0.25);
+                
+                // Pollution: lower is better
+                score += Math.max(0, 25 - data.pollution * 0.5);
+                
+                return Math.round(Math.max(0, Math.min(100, score)));
             };
             
             const getMetricStatus = (value, type) => {
                 switch(type) {
                     case 'temperature':
-                        return value >= 20 && value <= 26 ? 'good' : 'warning';
+                        if (value >= 20 && value <= 26) return 'good';
+                        if (value >= 18 && value <= 28) return 'warning';
+                        return 'critical';
                     case 'pH':
-                        return value >= 8.0 && value <= 8.3 ? 'good' : 'warning';
+                        if (value >= 8.0 && value <= 8.3) return 'good';
+                        if (value >= 7.8 && value <= 8.4) return 'warning';
+                        return 'critical';
                     case 'oxygen':
-                        return value >= 85 ? 'good' : value >= 70 ? 'warning' : 'critical';
+                        if (value >= 85) return 'good';
+                        if (value >= 70) return 'warning';
+                        return 'critical';
                     case 'pollution':
-                        return value <= 20 ? 'good' : value <= 35 ? 'warning' : 'critical';
+                        if (value <= 15) return 'good';
+                        if (value <= 30) return 'warning';
+                        return 'critical';
                     default:
                         return 'good';
                 }
             };
             
+            const initAudioContext = async () => {
+                try {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    setAudioContext(ctx);
+                    
+                    if (audioRef.current && ctx.state === 'suspended') {
+                        await ctx.resume();
+                    }
+                    
+                    if (audioRef.current) {
+                        const source = ctx.createMediaElementSource(audioRef.current);
+                        const gainNode = ctx.createGain();
+                        gainNodeRef.current = gainNode;
+                        
+                        source.connect(gainNode);
+                        gainNode.connect(ctx.destination);
+                    }
+                } catch (error) {
+                    console.error('Audio context error:', error);
+                    setError('Audio system initialization failed');
+                }
+            };
+            
             const togglePlay = async () => {
                 try {
+                    setError(null);
+                    
                     if (!audioContext) {
-                        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                        setAudioContext(ctx);
-                        
-                        if (audioRef.current) {
-                            const source = ctx.createMediaElementSource(audioRef.current);
-                            const gainNode = ctx.createGain();
-                            gainNodeRef.current = gainNode;
-                            
-                            source.connect(gainNode);
-                            gainNode.connect(ctx.destination);
-                        }
+                        await initAudioContext();
                     }
                     
                     if (audioRef.current) {
                         if (isPlaying) {
                             await audioRef.current.pause();
+                            setIsPlaying(false);
                         } else {
+                            setLoading(true);
                             await audioRef.current.play();
+                            setIsPlaying(true);
+                            setLoading(false);
                         }
-                        setIsPlaying(!isPlaying);
                     }
                 } catch (error) {
                     console.error('Playback error:', error);
+                    setLoading(false);
+                    setError('Playback failed - try clicking play again');
                 }
             };
             
             const nextTrack = () => {
                 setCurrentTrack((prev) => (prev + 1) % tracks.length);
+                setIsPlaying(false);
             };
             
             const prevTrack = () => {
                 setCurrentTrack((prev) => (prev - 1 + tracks.length) % tracks.length);
+                setIsPlaying(false);
             };
             
             const healthScore = calculateOceanHealth(oceanData);
@@ -514,32 +626,38 @@
                             </div>
                         </div>
                         
+                        {error && (
+                            <div className="error-message">
+                                ⚠️ {error}
+                            </div>
+                        )}
+                        
                         <div className="ocean-metrics">
                             <div className="metric">
                                 <div className="metric-label">Temperature</div>
                                 <div className={`metric-value metric-${getMetricStatus(oceanData.temperature, 'temperature')}`}>
-                                    {oceanData.temperature}°C
+                                    {oceanData.temperature.toFixed(1)}°C
                                 </div>
                             </div>
                             
                             <div className="metric">
                                 <div className="metric-label">pH Level</div>
                                 <div className={`metric-value metric-${getMetricStatus(oceanData.pH, 'pH')}`}>
-                                    {oceanData.pH}
+                                    {oceanData.pH.toFixed(2)}
                                 </div>
                             </div>
                             
                             <div className="metric">
                                 <div className="metric-label">Oxygen</div>
                                 <div className={`metric-value metric-${getMetricStatus(oceanData.oxygen, 'oxygen')}`}>
-                                    {oceanData.oxygen}%
+                                    {Math.round(oceanData.oxygen)}%
                                 </div>
                             </div>
                             
                             <div className="metric">
                                 <div className="metric-label">Pollution</div>
                                 <div className={`metric-value metric-${getMetricStatus(oceanData.pollution, 'pollution')}`}>
-                                    {oceanData.pollution}%
+                                    {Math.round(oceanData.pollution)}%
                                 </div>
                             </div>
                             
@@ -550,19 +668,25 @@
                                 </div>
                             </div>
                         </div>
+                        
+                        {healthScore < 70 && (
+                            <div className="info-message">
+                                🌊 Ocean health is affecting the music distortion. Lower health = more audio effects.
+                            </div>
+                        )}
                     </div>
                     
                     {/* Audio Effects Visualization */}
                     <div className="audio-effects">
-                        <div className="effects-title">Audio Distortion</div>
+                        <div className="effects-title">Audio Effects</div>
                         <div className="effect-visualization">
                             🎵
                         </div>
                         <div className="distortion-level">
                             {distortionLevel}% distorted
                         </div>
-                        <div style={{fontSize: '10px', marginTop: '5px', opacity: 0.7}}>
-                            Based on ocean health
+                        <div className="health-status">
+                            Speed: {(audioEffects.speed * 100).toFixed(0)}%
                         </div>
                     </div>
                     
@@ -582,8 +706,12 @@
                                 <button className="control-btn" onClick={prevTrack}>
                                     ⏮️
                                 </button>
-                                <button className="control-btn play-btn" onClick={togglePlay}>
-                                    {isPlaying ? '⏸️' : '▶️'}
+                                <button 
+                                    className="control-btn play-btn" 
+                                    onClick={togglePlay}
+                                    disabled={loading}
+                                >
+                                    {loading ? '⏳' : (isPlaying ? '⏸️' : '▶️')}
                                 </button>
                                 <button className="control-btn" onClick={nextTrack}>
                                     ⏭️
@@ -592,12 +720,14 @@
                         </div>
                     </div>
                     
-                    {/* Hidden audio element for Web Audio API */}
+                    {/* Audio element */}
                     <audio 
                         ref={audioRef}
-                        src="https://www.soundjay.com/misc/sounds/bell-ringing-05.wav"
+                        src={currentTrackData.url}
                         crossOrigin="anonymous"
-                        loop
+                        onError={() => setError(`Failed to load: ${currentTrackData.title}`)}
+                        onLoadStart={() => setLoading(true)}
+                        onCanPlay={() => setLoading(false)}
                     />
                 </div>
             );
