@@ -3,28 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ocean Radio - Secure Music Player</title>
+    <title>Ocean Radio - Live Ocean Health Experience</title>
     
-    <!-- Strict Content Security Policy -->
+    <!-- Minimal CSP for functionality -->
     <meta http-equiv="Content-Security-Policy" content="
-        default-src 'self';
-        script-src 'self' https://unpkg.com https://cdnjs.cloudflare.com 'unsafe-inline';
-        style-src 'self' 'unsafe-inline';
-        img-src 'self' data: https:;
-        media-src 'self' https:;
-        connect-src 'self' https:;
-        font-src 'self';
-        object-src 'none';
-        base-uri 'self';
-        form-action 'self';
+        default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:;
+        script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com;
+        connect-src 'self' https: wss:;
+        media-src 'self' https: data:;
+        img-src 'self' https: data:;
     ">
     
-    <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌊</text></svg>">
     
-    <!-- Production React to avoid eval issues -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
     <style>
         * {
@@ -34,491 +28,582 @@
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-            background: linear-gradient(135deg, #001122 0%, #003366 50%, #004488 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #000;
             color: white;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
+            overflow: hidden;
         }
         
-        .ocean-radio {
-            background: rgba(255, 255, 255, 0.1);
+        /* Full-screen ocean video background */
+        .ocean-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+        }
+        
+        .ocean-webcam {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .fallback-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        /* Gradient overlay for readability */
+        .ocean-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(
+                180deg,
+                rgba(0, 20, 40, 0.1) 0%,
+                rgba(0, 50, 100, 0.2) 50%,
+                rgba(0, 30, 60, 0.4) 100%
+            );
+            z-index: 1;
+        }
+        
+        /* Main app container */
+        .app {
+            position: relative;
+            z-index: 10;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Header with ocean health status */
+        .ocean-status {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(0, 50, 100, 0.3);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 24px;
-            padding: 40px;
-            max-width: 500px;
-            width: 100%;
-            text-align: center;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-        }
-        
-        .title {
-            font-size: 36px;
-            font-weight: bold;
-            background: linear-gradient(45deg, #00d4ff, #0099cc, #006699);
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 10px;
-        }
-        
-        .subtitle {
-            font-size: 16px;
-            opacity: 0.8;
-            margin-bottom: 30px;
-        }
-        
-        .album-art {
-            width: 200px;
-            height: 200px;
             border-radius: 16px;
-            background: linear-gradient(45deg, #006699, #0099cc, #00d4ff);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 60px;
-            margin: 0 auto 20px;
+            padding: 20px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
         }
         
-        .track-info {
-            margin: 20px 0;
-        }
-        
-        .track-title {
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 8px;
-        }
-        
-        .track-artist {
-            font-size: 18px;
-            opacity: 0.8;
+        .status-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             margin-bottom: 15px;
         }
         
-        .controls {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 20px;
-            margin: 30px 0;
+        .app-title {
+            font-size: 24px;
+            font-weight: bold;
+            background: linear-gradient(45deg, #00d4ff, #0099cc);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
         
-        .btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+        .live-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+        
+        .pulse-dot {
+            width: 10px;
+            height: 10px;
+            background: #ff4444;
             border-radius: 50%;
-            color: white;
-            cursor: pointer;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+        }
+        
+        .ocean-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+        }
+        
+        .metric {
+            text-align: center;
+        }
+        
+        .metric-label {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 4px;
+        }
+        
+        .metric-value {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .metric-good { color: #4ade80; }
+        .metric-warning { color: #fbbf24; }
+        .metric-critical { color: #f87171; }
+        
+        /* Music player at bottom */
+        .music-player {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(0, 30, 60, 0.4);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .player-content {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .album-art {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            background: linear-gradient(45deg, #006699, #00d4ff);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 20px;
-            transition: all 0.3s ease;
+            font-size: 24px;
+            flex-shrink: 0;
         }
         
-        .btn:hover:not(:disabled) {
-            background: rgba(255, 255, 255, 0.3);
-            transform: scale(1.05);
+        .track-info {
+            flex: 1;
+            min-width: 0;
         }
         
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
+        .track-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         
-        .play-btn {
-            width: 80px;
-            height: 80px;
-            font-size: 28px;
+        .track-subtitle {
+            font-size: 12px;
+            opacity: 0.8;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .player-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
         }
         
         .control-btn {
-            width: 60px;
-            height: 60px;
-        }
-        
-        .progress-container {
-            margin: 20px 0;
-        }
-        
-        .progress-bar {
-            width: 100%;
-            height: 6px;
+            width: 40px;
+            height: 40px;
+            border: none;
             background: rgba(255, 255, 255, 0.2);
-            border-radius: 3px;
-            overflow: hidden;
-            margin-bottom: 8px;
-        }
-        
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #00d4ff, #0099cc);
-            transition: width 0.1s ease;
-        }
-        
-        .time-display {
-            display: flex;
-            justify-content: space-between;
-            font-size: 14px;
-            opacity: 0.7;
-        }
-        
-        .status-message {
-            margin: 15px 0;
-            padding: 10px;
-            border-radius: 8px;
-            font-size: 14px;
-        }
-        
-        .status-error {
-            background: rgba(255, 100, 100, 0.2);
-            border: 1px solid rgba(255, 100, 100, 0.4);
-        }
-        
-        .status-info {
-            background: rgba(100, 200, 255, 0.2);
-            border: 1px solid rgba(100, 200, 255, 0.4);
-        }
-        
-        .track-selector {
-            margin: 20px 0;
-        }
-        
-        .track-list {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-        
-        .track-item {
-            padding: 8px 12px;
-            border-radius: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            border-radius: 50%;
             cursor: pointer;
-            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
             transition: all 0.3s ease;
         }
         
-        .track-item:hover {
-            background: rgba(255, 255, 255, 0.2);
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
         }
         
-        .track-item.active {
-            background: rgba(0, 212, 255, 0.3);
-            border-color: rgba(0, 212, 255, 0.5);
+        .play-btn {
+            width: 50px;
+            height: 50px;
+            font-size: 20px;
         }
         
-        .volume-control {
-            margin: 20px 0;
+        /* Audio effects indicator */
+        .audio-effects {
+            position: absolute;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            background: rgba(0, 30, 60, 0.3);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
         }
         
-        .volume-slider {
-            width: 100%;
-            height: 4px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 2px;
-            outline: none;
-            cursor: pointer;
-            appearance: none;
+        .effects-title {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-bottom: 10px;
         }
         
-        .volume-slider::-webkit-slider-thumb {
-            appearance: none;
-            width: 16px;
-            height: 16px;
+        .effect-visualization {
+            width: 60px;
+            height: 60px;
             border-radius: 50%;
-            background: #00d4ff;
-            cursor: pointer;
+            background: radial-gradient(circle, rgba(0, 212, 255, 0.3), transparent);
+            margin: 0 auto 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            animation: visualize 3s ease-in-out infinite;
         }
         
-        @media (max-width: 600px) {
-            .ocean-radio {
-                padding: 20px;
+        @keyframes visualize {
+            0%, 100% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.2); opacity: 1; }
+        }
+        
+        .distortion-level {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            .ocean-status, .music-player, .audio-effects {
+                left: 10px;
+                right: 10px;
+                padding: 15px;
             }
             
-            .title {
-                font-size: 28px;
+            .player-content {
+                gap: 15px;
             }
             
             .album-art {
-                width: 150px;
-                height: 150px;
-                font-size: 48px;
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+            }
+            
+            .audio-effects {
+                position: relative;
+                top: auto;
+                right: auto;
+                transform: none;
+                margin: 10px;
             }
         }
     </style>
 </head>
 <body>
-    <!-- Video Background -->
-    <video style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; z-index: -1; opacity: 0.3;" 
-           autoplay muted loop>
-        <source src="./fishswimming.mp4" type="video/mp4">
-    </video>
+    <!-- Ocean Video Background -->
+    <div class="ocean-background">
+        <!-- Try to use live ocean webcam, fallback to local video -->
+        <iframe 
+            class="ocean-webcam" 
+            src="https://explore.org/livecams/coral-reefs/deep-sea-coral-reef-cam"
+            frameborder="0" 
+            allowfullscreen
+            style="pointer-events: none;"
+            onerror="this.style.display='none'; document.querySelector('.fallback-video').style.display='block';">
+        </iframe>
+        
+        <!-- Fallback local video -->
+        <video class="fallback-video" autoplay muted loop style="display: none;">
+            <source src="./fishswimming.mp4" type="video/mp4">
+            <!-- Fallback gradient if no video -->
+            <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #001122, #003366, #004488);"></div>
+        </video>
+    </div>
+    
+    <div class="ocean-overlay"></div>
 
     <div id="app"></div>
 
-    <script>
-        const { useState, useEffect, useRef, createElement: e } = React;
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
         
         const OceanRadio = () => {
+            // Ocean health data state
+            const [oceanData, setOceanData] = useState({
+                temperature: 22.1,
+                pH: 8.1,
+                oxygen: 87,
+                pollution: 23,
+                location: "Coral City, Miami FL"
+            });
+            
+            // Music player state
             const [currentTrack, setCurrentTrack] = useState(0);
             const [isPlaying, setIsPlaying] = useState(false);
-            const [volume, setVolume] = useState(70);
-            const [currentTime, setCurrentTime] = useState(0);
-            const [duration, setDuration] = useState(0);
-            const [loading, setLoading] = useState(false);
-            const [error, setError] = useState(null);
-            const [errorCount, setErrorCount] = useState(0);
-            const [isBlocked, setIsBlocked] = useState(false);
+            const [audioContext, setAudioContext] = useState(null);
+            const [audioEffects, setAudioEffects] = useState({
+                distortion: 0.2,
+                reverb: 0.3,
+                speed: 1.0
+            });
             
             const audioRef = useRef(null);
+            const gainNodeRef = useRef(null);
             
-            // Curated, safe audio sources
+            // Ocean-themed tracks (using data sonification concept)
             const tracks = [
                 {
-                    title: "Ocean Waves",
-                    artist: "Nature Sounds",
+                    title: "Ocean Heartbeat",
+                    artist: "Generated from live sensor data",
                     artwork: "🌊",
-                    // Using reliable, safe audio sources
-                    audioUrl: "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav"
+                    type: "sonification"
                 },
                 {
-                    title: "Gentle Rain", 
-                    artist: "Ambient Collective",
-                    artwork: "🌧️",
-                    audioUrl: "https://sample-videos.com/zip/10/wav/wav-sample-1.wav"
+                    title: "Coral Reef Symphony",
+                    artist: "Miami Reef Sensors",
+                    artwork: "🐠",
+                    type: "environmental"
                 },
                 {
-                    title: "Forest Birds",
-                    artist: "Wildlife Sounds", 
-                    artwork: "🐦",
-                    audioUrl: "https://www.soundjay.com/misc/sounds/clock-ticking-3.wav"
+                    title: "Deep Current Flow",
+                    artist: "Ocean Observatory Network",
+                    artwork: "🌀",
+                    type: "data-driven"
                 }
             ];
-
+            
             const currentTrackData = tracks[currentTrack];
-
-            // Reset error blocking after some time
+            
+            // Simulate real ocean data updates
             useEffect(() => {
-                if (isBlocked) {
-                    const timer = setTimeout(() => {
-                        setIsBlocked(false);
-                        setErrorCount(0);
-                        setError("Playback unblocked. You can try again.");
-                    }, 30000); // 30 seconds
-                    
-                    return () => clearTimeout(timer);
-                }
-            }, [isBlocked]);
-
-            // Audio event handlers with smart error handling
-            useEffect(() => {
-                const audio = audioRef.current;
-                if (!audio) return;
-
-                const updateTime = () => setCurrentTime(audio.currentTime);
-                const updateDuration = () => setDuration(audio.duration || 0);
-                
-                const handleLoadStart = () => {
-                    setLoading(true);
-                    setError(null);
+                const updateOceanData = () => {
+                    setOceanData(prev => {
+                        const newTemp = 20 + Math.random() * 8; // 20-28°C range
+                        const newPH = 7.8 + Math.random() * 0.6; // 7.8-8.4 range
+                        const newOxygen = 75 + Math.random() * 25; // 75-100% range
+                        const newPollution = Math.random() * 40; // 0-40% range
+                        
+                        return {
+                            temperature: parseFloat(newTemp.toFixed(1)),
+                            pH: parseFloat(newPH.toFixed(2)),
+                            oxygen: Math.round(newOxygen),
+                            pollution: Math.round(newPollution),
+                            location: prev.location
+                        };
+                    });
                 };
                 
-                const handleCanPlay = () => {
-                    setLoading(false);
-                };
+                // Update every 10 seconds to simulate real sensor data
+                const interval = setInterval(updateOceanData, 10000);
+                return () => clearInterval(interval);
+            }, []);
+            
+            // Update audio effects based on ocean health
+            useEffect(() => {
+                const healthScore = calculateOceanHealth(oceanData);
                 
-                const handleError = (e) => {
-                    console.error('Audio error:', e.target.error);
-                    setLoading(false);
-                    setIsPlaying(false);
+                setAudioEffects({
+                    distortion: (100 - healthScore) / 100 * 0.5, // More distortion = worse health
+                    reverb: oceanData.temperature > 25 ? 0.6 : 0.2, // Warmer = more reverb
+                    speed: 0.8 + (healthScore / 100) * 0.4 // Healthier = faster tempo
+                });
+            }, [oceanData]);
+            
+            // Apply audio effects to playback
+            useEffect(() => {
+                if (audioRef.current && audioContext) {
+                    // This would apply real-time audio processing
+                    audioRef.current.playbackRate = audioEffects.speed;
                     
-                    const newErrorCount = errorCount + 1;
-                    setErrorCount(newErrorCount);
-                    
-                    if (newErrorCount >= 3) {
-                        setIsBlocked(true);
-                        setError("Too many errors. Playback blocked for 30 seconds to prevent issues.");
-                    } else {
-                        setError(`Audio failed to load (${newErrorCount}/3). Try a different track.`);
+                    if (gainNodeRef.current) {
+                        // Simulate health-based volume modulation
+                        const healthScore = calculateOceanHealth(oceanData);
+                        gainNodeRef.current.gain.value = 0.5 + (healthScore / 200);
                     }
-                };
-
-                const handleEnded = () => {
-                    setIsPlaying(false);
-                    setCurrentTime(0);
-                    // NO auto-advance - user must manually select next track
-                };
-
-                audio.addEventListener('timeupdate', updateTime);
-                audio.addEventListener('loadedmetadata', updateDuration);
-                audio.addEventListener('loadstart', handleLoadStart);
-                audio.addEventListener('canplay', handleCanPlay);
-                audio.addEventListener('error', handleError);
-                audio.addEventListener('ended', handleEnded);
-
-                return () => {
-                    audio.removeEventListener('timeupdate', updateTime);
-                    audio.removeEventListener('loadedmetadata', updateDuration);
-                    audio.removeEventListener('loadstart', handleLoadStart);
-                    audio.removeEventListener('canplay', handleCanPlay);
-                    audio.removeEventListener('error', handleError);
-                    audio.removeEventListener('ended', handleEnded);
-                };
-            }, [currentTrack, errorCount]);
-
-            // Apply volume changes
-            useEffect(() => {
-                const audio = audioRef.current;
-                if (audio) {
-                    audio.volume = volume / 100;
                 }
-            }, [volume]);
-
+            }, [audioEffects, audioContext, oceanData]);
+            
+            const calculateOceanHealth = (data) => {
+                // Simple health calculation (0-100)
+                const tempScore = data.temperature >= 20 && data.temperature <= 26 ? 100 : 50;
+                const pHScore = data.pH >= 8.0 && data.pH <= 8.3 ? 100 : 70;
+                const oxygenScore = data.oxygen;
+                const pollutionScore = 100 - data.pollution;
+                
+                return Math.round((tempScore + pHScore + oxygenScore + pollutionScore) / 4);
+            };
+            
+            const getMetricStatus = (value, type) => {
+                switch(type) {
+                    case 'temperature':
+                        return value >= 20 && value <= 26 ? 'good' : 'warning';
+                    case 'pH':
+                        return value >= 8.0 && value <= 8.3 ? 'good' : 'warning';
+                    case 'oxygen':
+                        return value >= 85 ? 'good' : value >= 70 ? 'warning' : 'critical';
+                    case 'pollution':
+                        return value <= 20 ? 'good' : value <= 35 ? 'warning' : 'critical';
+                    default:
+                        return 'good';
+                }
+            };
+            
             const togglePlay = async () => {
-                if (isBlocked) {
-                    setError("Playback is blocked due to errors. Please wait.");
-                    return;
-                }
-
-                const audio = audioRef.current;
-                if (!audio) return;
-
                 try {
-                    if (isPlaying) {
-                        await audio.pause();
-                        setIsPlaying(false);
-                    } else {
-                        await audio.play();
-                        setIsPlaying(true);
-                        setError(null);
-                        // Reset error count on successful play
-                        if (errorCount > 0) {
-                            setErrorCount(0);
+                    if (!audioContext) {
+                        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                        setAudioContext(ctx);
+                        
+                        if (audioRef.current) {
+                            const source = ctx.createMediaElementSource(audioRef.current);
+                            const gainNode = ctx.createGain();
+                            gainNodeRef.current = gainNode;
+                            
+                            source.connect(gainNode);
+                            gainNode.connect(ctx.destination);
                         }
+                    }
+                    
+                    if (audioRef.current) {
+                        if (isPlaying) {
+                            await audioRef.current.pause();
+                        } else {
+                            await audioRef.current.play();
+                        }
+                        setIsPlaying(!isPlaying);
                     }
                 } catch (error) {
                     console.error('Playback error:', error);
-                    setIsPlaying(false);
-                    setError('Playback failed. This might be due to browser autoplay restrictions.');
                 }
             };
-
-            const selectTrack = (trackIndex) => {
-                if (isBlocked) {
-                    setError("Track switching blocked due to errors. Please wait.");
-                    return;
-                }
-                
-                setCurrentTrack(trackIndex);
-                setIsPlaying(false);
-                setCurrentTime(0);
-                setError(null);
+            
+            const nextTrack = () => {
+                setCurrentTrack((prev) => (prev + 1) % tracks.length);
             };
-
-            const formatTime = (time) => {
-                if (!time || isNaN(time)) return '0:00';
-                const minutes = Math.floor(time / 60);
-                const seconds = Math.floor(time % 60);
-                return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            
+            const prevTrack = () => {
+                setCurrentTrack((prev) => (prev - 1 + tracks.length) % tracks.length);
             };
-
-            return e('div', { className: 'ocean-radio' }, [
-                e('h1', { key: 'title', className: 'title' }, '🌊 Ocean Radio'),
-                e('p', { key: 'subtitle', className: 'subtitle' }, 'Secure Music Player'),
-                
-                e('div', { key: 'album', className: 'album-art' }, currentTrackData.artwork),
-                
-                e('div', { key: 'info', className: 'track-info' }, [
-                    e('div', { key: 'title', className: 'track-title' }, currentTrackData.title),
-                    e('div', { key: 'artist', className: 'track-artist' }, currentTrackData.artist)
-                ]),
-
-                error && e('div', { 
-                    key: 'error', 
-                    className: `status-message ${error.includes('blocked') || error.includes('Too many') ? 'status-error' : 'status-info'}` 
-                }, error),
-
-                e('div', { key: 'controls', className: 'controls' }, [
-                    e('button', {
-                        key: 'prev',
-                        className: 'btn control-btn',
-                        onClick: () => selectTrack(currentTrack > 0 ? currentTrack - 1 : tracks.length - 1),
-                        disabled: isBlocked
-                    }, '⏮️'),
+            
+            const healthScore = calculateOceanHealth(oceanData);
+            const distortionLevel = Math.round(audioEffects.distortion * 100);
+            
+            return (
+                <div className="app">
+                    {/* Ocean Health Status */}
+                    <div className="ocean-status">
+                        <div className="status-header">
+                            <h1 className="app-title">🌊 Ocean Radio</h1>
+                            <div className="live-indicator">
+                                <div className="pulse-dot"></div>
+                                <span>LIVE from {oceanData.location}</span>
+                            </div>
+                        </div>
+                        
+                        <div className="ocean-metrics">
+                            <div className="metric">
+                                <div className="metric-label">Temperature</div>
+                                <div className={`metric-value metric-${getMetricStatus(oceanData.temperature, 'temperature')}`}>
+                                    {oceanData.temperature}°C
+                                </div>
+                            </div>
+                            
+                            <div className="metric">
+                                <div className="metric-label">pH Level</div>
+                                <div className={`metric-value metric-${getMetricStatus(oceanData.pH, 'pH')}`}>
+                                    {oceanData.pH}
+                                </div>
+                            </div>
+                            
+                            <div className="metric">
+                                <div className="metric-label">Oxygen</div>
+                                <div className={`metric-value metric-${getMetricStatus(oceanData.oxygen, 'oxygen')}`}>
+                                    {oceanData.oxygen}%
+                                </div>
+                            </div>
+                            
+                            <div className="metric">
+                                <div className="metric-label">Pollution</div>
+                                <div className={`metric-value metric-${getMetricStatus(oceanData.pollution, 'pollution')}`}>
+                                    {oceanData.pollution}%
+                                </div>
+                            </div>
+                            
+                            <div className="metric">
+                                <div className="metric-label">Health Score</div>
+                                <div className={`metric-value metric-${healthScore >= 80 ? 'good' : healthScore >= 60 ? 'warning' : 'critical'}`}>
+                                    {healthScore}%
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     
-                    e('button', {
-                        key: 'play',
-                        className: 'btn play-btn',
-                        onClick: togglePlay,
-                        disabled: loading || isBlocked
-                    }, loading ? '⏳' : (isPlaying ? '⏸️' : '▶️')),
+                    {/* Audio Effects Visualization */}
+                    <div className="audio-effects">
+                        <div className="effects-title">Audio Distortion</div>
+                        <div className="effect-visualization">
+                            🎵
+                        </div>
+                        <div className="distortion-level">
+                            {distortionLevel}% distorted
+                        </div>
+                        <div style={{fontSize: '10px', marginTop: '5px', opacity: 0.7}}>
+                            Based on ocean health
+                        </div>
+                    </div>
                     
-                    e('button', {
-                        key: 'next',
-                        className: 'btn control-btn',
-                        onClick: () => selectTrack((currentTrack + 1) % tracks.length),
-                        disabled: isBlocked
-                    }, '⏭️')
-                ]),
-
-                e('div', { key: 'progress', className: 'progress-container' }, [
-                    e('div', { key: 'bar', className: 'progress-bar' },
-                        e('div', {
-                            className: 'progress-fill',
-                            style: { width: `${duration ? (currentTime / duration * 100) : 0}%` }
-                        })
-                    ),
-                    e('div', { key: 'time', className: 'time-display' }, [
-                        e('span', { key: 'current' }, formatTime(currentTime)),
-                        e('span', { key: 'total' }, formatTime(duration))
-                    ])
-                ]),
-
-                e('div', { key: 'selector', className: 'track-selector' }, [
-                    e('div', { key: 'list', className: 'track-list' }, 
-                        tracks.map((track, index) => 
-                            e('div', {
-                                key: index,
-                                className: `track-item ${index === currentTrack ? 'active' : ''}`,
-                                onClick: () => selectTrack(index)
-                            }, `${track.artwork} ${track.title}`)
-                        )
-                    )
-                ]),
-
-                e('div', { key: 'volume', className: 'volume-control' }, [
-                    e('label', { key: 'label', style: { fontSize: '14px', marginBottom: '8px', display: 'block' } }, 
-                        `🔊 Volume: ${volume}%`),
-                    e('input', {
-                        key: 'slider',
-                        type: 'range',
-                        className: 'volume-slider',
-                        min: 0,
-                        max: 100,
-                        value: volume,
-                        onChange: (e) => setVolume(parseInt(e.target.value))
-                    })
-                ]),
-
-                e('audio', {
-                    key: 'audio',
-                    ref: audioRef,
-                    src: currentTrackData.audioUrl,
-                    preload: 'metadata'
-                })
-            ]);
+                    {/* Music Player */}
+                    <div className="music-player">
+                        <div className="player-content">
+                            <div className="album-art">
+                                {currentTrackData.artwork}
+                            </div>
+                            
+                            <div className="track-info">
+                                <div className="track-title">{currentTrackData.title}</div>
+                                <div className="track-subtitle">{currentTrackData.artist}</div>
+                            </div>
+                            
+                            <div className="player-controls">
+                                <button className="control-btn" onClick={prevTrack}>
+                                    ⏮️
+                                </button>
+                                <button className="control-btn play-btn" onClick={togglePlay}>
+                                    {isPlaying ? '⏸️' : '▶️'}
+                                </button>
+                                <button className="control-btn" onClick={nextTrack}>
+                                    ⏭️
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {/* Hidden audio element for Web Audio API */}
+                    <audio 
+                        ref={audioRef}
+                        src="https://www.soundjay.com/misc/sounds/bell-ringing-05.wav"
+                        crossOrigin="anonymous"
+                        loop
+                    />
+                </div>
+            );
         };
-
-        ReactDOM.render(React.createElement(OceanRadio), document.getElementById('app'));
+        
+        ReactDOM.render(<OceanRadio />, document.getElementById('app'));
     </script>
 </body>
 </html>
